@@ -1,25 +1,46 @@
 import * as dfd from "danfojs-node"
 import {DataFrame, Series} from "danfojs-node";
+import {BASE_PRECISION, BN, convertToNumber, PRICE_PRECISION, QUOTE_PRECISION} from "@drift-labs/sdk";
 
-export function getOrderDataFrame(json: any) {
+export function getFormattedOrderDataFrame(json: any) {
 	const orders = json["orders"];
 
 	const flattenedOrders = [];
 
 	for (const order of orders) {
 		const orderInfo = order["order"];
+		orderInfo["baseAssetAmount"] = convertToNumber(new BN(orderInfo["baseAssetAmount"]), BASE_PRECISION);
+		orderInfo["baseAssetAmountFilled"] = convertToNumber(new BN(orderInfo["baseAssetAmountFilled"]), BASE_PRECISION);
+		orderInfo["price"] = convertToNumber(new BN(orderInfo["price"]), PRICE_PRECISION);
+		orderInfo["oraclePriceOffset"] = convertToNumber(new BN(orderInfo["oraclePriceOffset"]), PRICE_PRECISION);
+
+		if (orderInfo["oraclePriceOffset"] != 0) {
+			let oraclePrice = getOraclePrice(json, orderInfo["marketType"], orderInfo["marketIndex"]);
+			orderInfo["price"] = oraclePrice + orderInfo["oraclePriceOffset"];
+		}
+
 		orderInfo["user"] = order["user"];
+
 		flattenedOrders.push(orderInfo);
 	}
 
 	return new DataFrame(flattenedOrders);
 }
 
-export function getMMScoreForSnapshot(df: DataFrame) {
-	const d = df.query(df["orderType"].eq("limit"));
+export function getOraclePrice(json: any, marketType: string, marketIndex: number) {
+	if (marketType === "spot") {
+		return convertToNumber(new BN(json["spotOracles"][marketIndex]["price"]), QUOTE_PRECISION);
+	} else {
+		return convertToNumber(new BN(json["perpOracles"][marketIndex]["price"]), QUOTE_PRECISION);
+	}
+}
+
+export function getLiquidityScoreForSnapshot(df: DataFrame, marketType: string, marketIndex: number, oraclePrice: number) {
+	const d = df.query(df["orderType"].eq("limit").and(df["marketIndex"].eq(marketIndex)).and(df["marketType"].eq(marketType)));
+	d.resetIndex({inplace: true});
+
 	d.addColumn("baseAssetAmountLeft", d["baseAssetAmount"].sub(d["baseAssetAmountFilled"]), { inplace: true });
 
-	const oraclePrice = d["oraclePrice"].max();
 	let bestBid = d.query(d["direction"].eq("long"))["price"].max();
 	let bestAsk = d.query(d["direction"].eq("short"))["price"].min();
 
