@@ -1,7 +1,21 @@
 import * as dfd from "danfojs-node"
 import {DataFrame, Series} from "danfojs-node";
 
-function getMMScoreForSnapSlot(df: DataFrame) {
+export function getOrderDataFrame(json: any) {
+	const orders = json["orders"];
+
+	const flattenedOrders = [];
+
+	for (const order of orders) {
+		const orderInfo = order["order"];
+		orderInfo["user"] = order["user"];
+		flattenedOrders.push(orderInfo);
+	}
+
+	return new DataFrame(flattenedOrders);
+}
+
+export function getMMScoreForSnapshot(df: DataFrame) {
 	const d = df.query(df["orderType"].eq("limit"));
 	d.addColumn("baseAssetAmountLeft", d["baseAssetAmount"].sub(d["baseAssetAmountFilled"]), { inplace: true });
 
