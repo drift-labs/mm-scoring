@@ -52,8 +52,6 @@ export function getLiquidityScoreForSnapshot(df: DataFrame, marketType: string, 
 		}
 	}
 
-	console.log(bestBid, bestAsk)
-
 	const markPrice = (bestBid + bestAsk) / 2
 
 	const mbpsValues = [
@@ -91,8 +89,8 @@ export function getLiquidityScoreForSnapshot(df: DataFrame, marketType: string, 
 	d.addColumn("level", d.apply(_ => NaN, {axis: 1}) as Series, {inplace: true});
 	d.addColumn("score", d.apply(_ => NaN, {axis: 1}) as Series, {inplace: true});
 
-	const top6Bids = d.query(d["direction"].eq("long")).groupby(["priceRounded"]).agg({"baseAssetAmountLeft": "sum"}).sortValues("priceRounded", {ascending: false}).iloc({rows: ["0:6"]});
-	const top6Asks = d.query(d["direction"].eq("short")).groupby(["priceRounded"]).agg({"baseAssetAmountLeft": "sum"}).sortValues("priceRounded", {ascending: true}).iloc({rows: ["0:6"]});
+	const top6Bids = d.query(d["direction"].eq("long")).groupby(["priceRounded"]).agg({"baseAssetAmountLeft": "sum"}).sortValues("priceRounded", {ascending: false});
+	const top6Asks = d.query(d["direction"].eq("short")).groupby(["priceRounded"]).agg({"baseAssetAmountLeft": "sum"}).sortValues("priceRounded", {ascending: true});
 
 	const tts = dfd.concat({ dfList: [top6Bids.column("baseAssetAmountLeft_sum"), top6Asks.column("baseAssetAmountLeft_sum")], axis: 1}) as DataFrame;
 	tts.$setColumnNames(["bs", "as"]);
@@ -103,7 +101,11 @@ export function getLiquidityScoreForSnapshot(df: DataFrame, marketType: string, 
 
 	const scoreScale = tts.min({axis: 1}).div(q).mul(100);
 
-	const multipliers = [4, 2, .75, .4, .3, .2];
+	let multipliers = new Array(scoreScale.size).fill(0);
+	const tiersMultiplier = [4, 2, .75, .4, .3, .2];
+	for (let i = 0; i < Math.min(tiersMultiplier.length, multipliers.length); i++) {
+		multipliers[i] = tiersMultiplier[i];
+	}
 
 	scoreScale.mul(multipliers, { inplace: true });
 
@@ -112,6 +114,9 @@ export function getLiquidityScoreForSnapshot(df: DataFrame, marketType: string, 
 	//@ts-ignore
 	for (const [i, [price]] of top6Bids.values.entries()) {
 		const char = chars[i];
+		if (!char) {
+			continue;
+		}
 		const ba = d.query(d["priceRounded"].eq(price).and(d["direction"].eq("long"))).column("baseAssetAmountLeft");
 		ba.div(ba.sum(), { inplace: true });
 		ba.mul(scoreScale.values[i] as number, { inplace: true });
@@ -127,6 +132,9 @@ export function getLiquidityScoreForSnapshot(df: DataFrame, marketType: string, 
 	//@ts-ignore
 	for (const [i, [price]] of top6Asks.values.entries()) {
 		const char = chars[i];
+		if (!char) {
+			continue;
+		}
 		const ba = d.query(d["priceRounded"].eq(price).and(d["direction"].eq("short"))).column("baseAssetAmountLeft");
 		ba.div(ba.sum(), { inplace: true });
 		ba.mul(scoreScale.values[i] as number, { inplace: true });
