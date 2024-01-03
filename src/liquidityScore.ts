@@ -164,7 +164,6 @@ export function groupLiquidityScoreForAggregateList(df: DataFrame, slot: number)
 	const aggregated = df.query(df["score"].gt(0)).groupby(["user"]).agg({"score": "sum"});
 	aggregated.$setColumnNames(["user", "score"]);
 	aggregated.addColumn("slot", aggregated.apply(_ => slot, {axis: 1}) as Series, {inplace: true});
-	aggregated.resetIndex({inplace: true});
 
 	return aggregated;
 }
