@@ -1,6 +1,7 @@
 import * as dfd from "danfojs-node"
 import {DataFrame, Series} from "danfojs-node";
 import {BASE_PRECISION, BN, convertToNumber, PRICE_PRECISION, QUOTE_PRECISION} from "@drift-labs/sdk";
+import * as Papa from "papaparse"
 
 export function getFormattedOrderDataFrame(json: any) {
 	const orders = json["orders"];
@@ -148,6 +149,10 @@ export function getLiquidityScoreForSnapshot(df: DataFrame, marketType: string, 
 	}
 
 	return d;
+}
+
+export function getAggregateLiquidityScoreFromString(csv: string) : DataFrame {
+	return new DataFrame(Papa.parse(csv).data);
 }
 
 export function getDefaultAggregateLiquidityScores() {
