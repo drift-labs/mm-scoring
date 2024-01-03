@@ -149,3 +149,29 @@ export function getLiquidityScoreForSnapshot(df: DataFrame, marketType: string, 
 
 	return d;
 }
+
+export function getDefaultAggregateLiquidityScores() {
+	return new DataFrame([], {columns: ["user", "score", "slot"]});
+}
+
+export function groupLiquidityScoreForAggregateList(df: DataFrame, slot: number) {
+	df.fillNa(0, {columns: ["score"], inplace: true});
+	const aggregated = df.query(df["score"].gt(0)).groupby(["user"]).agg({"score": "sum"});
+	aggregated.$setColumnNames(["user", "score"]);
+	aggregated.addColumn("slot", aggregated.apply(_ => slot, {axis: 1}) as Series, {inplace: true});
+	aggregated.resetIndex({inplace: true});
+
+	return aggregated;
+}
+
+export function mergeAggregateLiquidityScoreLists(original: DataFrame, append: DataFrame) {
+	if (original.size === 0 && append.size === 0) {
+		return original;
+	} else if (original.size === 0) {
+		return append;
+	} else if (append.size === 0) {
+		return original;
+	} else {
+		return dfd.concat({ dfList: [original, append], axis: 0 });
+	}
+}
