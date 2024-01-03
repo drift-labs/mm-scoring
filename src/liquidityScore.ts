@@ -45,6 +45,14 @@ export function getLiquidityScoreForSnapshot(df: DataFrame, marketType: string, 
 	let bestBid = d.query(d["direction"].eq("long"))["price"].max();
 	let bestAsk = d.query(d["direction"].eq("short"))["price"].min();
 
+	if (!bestBid) {
+		bestBid = oraclePrice;
+	}
+
+	if (!bestAsk) {
+		bestAsk = oraclePrice;
+	}
+
 	if (bestBid > bestAsk) {
 		if (bestBid > oraclePrice) {
 			bestBid = bestAsk
@@ -90,10 +98,21 @@ export function getLiquidityScoreForSnapshot(df: DataFrame, marketType: string, 
 	d.addColumn("level", d.apply(_ => NaN, {axis: 1}) as Series, {inplace: true});
 	d.addColumn("score", d.apply(_ => NaN, {axis: 1}) as Series, {inplace: true});
 
-	const top6Bids = d.query(d["direction"].eq("long")).groupby(["priceRounded"]).agg({"baseAssetAmountLeft": "sum"}).sortValues("priceRounded", {ascending: false});
-	const top6Asks = d.query(d["direction"].eq("short")).groupby(["priceRounded"]).agg({"baseAssetAmountLeft": "sum"}).sortValues("priceRounded", {ascending: true});
+	const top6BidsQuery = d.query(d["direction"].eq("long"));
+	let top6Bids = new DataFrame([], {columns: ["priceRounded", "baseAssetAmountLeft_sum"]});
+	if (top6BidsQuery.size) {
+		// @ts-ignore
+		top6Bids = d.query(d["direction"].eq("long")).groupby(["priceRounded"]).agg({"baseAssetAmountLeft": "sum"}).sortValues("priceRounded", {ascending: false});
+	}
+	const top6AsksQuery = d.query(d["direction"].eq("short"));
+	let top6Asks = new DataFrame([], {columns: ["priceRounded", "baseAssetAmountLeft_sum"]});
+	if (top6AsksQuery.size) {
+		// @ts-ignore
+		top6Asks = d.query(d["direction"].eq("short")).groupby(["priceRounded"]).agg({"baseAssetAmountLeft": "sum"}).sortValues("priceRounded", {ascending: true});
+	}
 
 	const tts = dfd.concat({ dfList: [top6Bids.column("baseAssetAmountLeft_sum"), top6Asks.column("baseAssetAmountLeft_sum")], axis: 1}) as DataFrame;
+	tts.fillNa(0, {inplace: true});
 	tts.$setColumnNames(["bs", "as"]);
 
 	const minq = 5000/markPrice;
@@ -161,7 +180,11 @@ export function getDefaultAggregateLiquidityScores() {
 
 export function groupLiquidityScoreForAggregateList(df: DataFrame, slot: number) {
 	df.fillNa(0, {columns: ["score"], inplace: true});
-	const aggregated = df.query(df["score"].gt(0)).groupby(["user"]).agg({"score": "sum"});
+	const aggQuery = df.query(df["score"].gt(0));
+	if (!aggQuery.size) {
+		return getDefaultAggregateLiquidityScores();
+	}
+	const aggregated = aggQuery.groupby(["user"]).agg({"score": "sum"});
 	aggregated.$setColumnNames(["user", "score"]);
 	aggregated.addColumn("slot", aggregated.apply(_ => slot, {axis: 1}) as Series, {inplace: true});
 
