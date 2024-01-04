@@ -171,7 +171,8 @@ export function getLiquidityScoreForSnapshot(df: DataFrame, marketType: string, 
 }
 
 export function getAggregateLiquidityScoreFromString(csv: string) : DataFrame {
-	return new DataFrame(Papa.parse(csv).data);
+	const data = Papa.parse(csv).data;
+	return new DataFrame(data.slice(1), {columns: data[0]});
 }
 
 export function getDefaultAggregateLiquidityScores() {
