@@ -167,6 +167,8 @@ export function getLiquidityScoreForSnapshot(df: DataFrame, marketType: string, 
 		}
 	}
 
+	d.addColumn("oraclePrice", d.apply(_ => oraclePrice, {axis: 1}) as Series, {inplace: true});
+
 	return d;
 }
 
