@@ -36,8 +36,11 @@ export function getOraclePrice(json: any, marketType: string, marketIndex: numbe
 	}
 }
 
-export function getLiquidityScoreForSnapshot(df: DataFrame, marketType: string, marketIndex: number, oraclePrice: number) {
+export function getLiquidityScoreForSnapshot(df: DataFrame, marketType: string, marketIndex: number, oraclePrice: number, slot: number) {
 	const d = df.query(df["orderType"].eq("limit").and(df["marketIndex"].eq(marketIndex)).and(df["marketType"].eq(marketType)));
+	d.resetIndex({inplace: true});
+	d.addColumn("currentSlot", d.apply(_ => slot, {axis: 1}) as Series, {inplace: true});
+	d.query(d["auctionDuration"].eq(0).or(d["currentSlot"].sub(d["slot"]).gt(d["auctionDuration"])), {inplace: true});
 	d.resetIndex({inplace: true});
 
 	d.addColumn("baseAssetAmountLeft", d["baseAssetAmount"].sub(d["baseAssetAmountFilled"]), { inplace: true });
