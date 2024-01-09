@@ -25,6 +25,71 @@ export function getFormattedOrderDataFrame(json: any) {
 		flattenedOrders.push(orderInfo);
 	}
 
+	const slot = json["slot"];
+	const vammLiquidity = json["vammLiquidity"];
+	for (const marketLiquidity of vammLiquidity) {
+		const marketIndex = marketLiquidity["marketIndex"];
+		for (const ask of marketLiquidity["asks"]) {
+			const order = {
+				status: "open",
+				orderType: 'limit',
+				marketType: "perp",
+				slot,
+				orderId: 0,
+				userOrderId: 0,
+				marketIndex,
+				baseAssetAmount: convertToNumber(new BN(ask['size']), BASE_PRECISION),
+				baseAssetAmountFilled: 0,
+				quoteAssetAmountFilled: '0',
+				price: convertToNumber(new BN(ask['price']), PRICE_PRECISION),
+				direction: 'short',
+				reduceOnly: false,
+				triggerPrice: '0',
+				triggerCondition: 'above',
+				existingPositionDirection: 'long',
+				postOnly: false,
+				immediateOrCancel: false,
+				oraclePriceOffset: 0,
+				auctionDuration: 0,
+				auctionStartPrice: '0',
+				auctionEndPrice: '0',
+				maxTs: '0',
+				user: 'vamm'
+			}
+			flattenedOrders.push(order);
+		}
+
+		for (const bid of marketLiquidity["bids"]) {
+			const order = {
+				status: "open",
+				orderType: 'limit',
+				marketType: "perp",
+				slot,
+				orderId: 0,
+				userOrderId: 0,
+				marketIndex,
+				baseAssetAmount: convertToNumber(new BN(bid['size']), BASE_PRECISION),
+				baseAssetAmountFilled: 0,
+				quoteAssetAmountFilled: '0',
+				price: convertToNumber(new BN(bid['price']), PRICE_PRECISION),
+				direction: 'long',
+				reduceOnly: false,
+				triggerPrice: '0',
+				triggerCondition: 'above',
+				existingPositionDirection: 'long',
+				postOnly: false,
+				immediateOrCancel: false,
+				oraclePriceOffset: 0,
+				auctionDuration: 0,
+				auctionStartPrice: '0',
+				auctionEndPrice: '0',
+				maxTs: '0',
+				user: 'vamm'
+			}
+			flattenedOrders.push(order);
+		}
+	}
+
 	return new DataFrame(flattenedOrders);
 }
 
