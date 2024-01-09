@@ -132,12 +132,12 @@ export function getLiquidityScoreForSnapshot(df: DataFrame, marketType: string, 
 	const markPrice = (bestBid + bestAsk) / 2
 
 	const mbpsValues = [
-		0.0001,
+		0.00025,
 		0.0005,
 		0.001,
 		0.002,
-		0.005,
-		0.01
+		0.003,
+		0.004
 	];
 	function roundThreshold(x, direction) {
 		let withinBpsOfPrice = .0005
