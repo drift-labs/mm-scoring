@@ -16,6 +16,6 @@ export function mergeDataframes(original: DataFrame, append: DataFrame) {
 
 export function getDataFrameFromString(csv: string) : DataFrame {
 	const data = Papa.parse(csv).data;
-	const filteredData = data.slice(1).filter((row: any) => row.length === 3);
+	const filteredData = data.slice(1).filter((row: any) => !!row[0]);
 	return new DataFrame(filteredData, {columns: data[0]});
 }
