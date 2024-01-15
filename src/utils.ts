@@ -10,7 +10,12 @@ export function mergeDataframes(original: DataFrame, append: DataFrame) {
 	} else if (append.size === 0) {
 		return original;
 	} else {
-		return dfd.concat({ dfList: [original, append], axis: 0 });
+		const columns = original.columns;
+		const originalValues = original.values;
+		const appendValues = append.values;
+		// @ts-ignore
+		const values = originalValues.concat(appendValues);
+		return new DataFrame(values, {columns});
 	}
 }
 
