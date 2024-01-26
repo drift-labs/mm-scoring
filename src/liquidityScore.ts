@@ -103,6 +103,16 @@ export function getOraclePrice(json: any, marketType: string, marketIndex: numbe
 
 export function getLiquidityScoreForSnapshot(df: DataFrame, marketType: string, marketIndex: number, oraclePrice: number, slot: number) {
 	const d = df.query(df["orderType"].eq("limit").and(df["marketIndex"].eq(marketIndex)).and(df["marketType"].eq(marketType)));
+
+	if (d.size == 0) {
+		d.addColumn("baseAssetAmountLeft", [], { inplace: true });
+		d.addColumn("currentSlot", [], { inplace: true });
+		d.addColumn("priceRounded", [], { inplace: true });
+		d.addColumn("level", [], { inplace: true });
+		d.addColumn("score", [], { inplace: true });
+		d.addColumn("oraclePrice", [], { inplace: true });
+		return d;
+	}
 	d.resetIndex({inplace: true});
 	d.addColumn("currentSlot", d.apply(_ => slot, {axis: 1}) as Series, {inplace: true});
 	d.query(d["auctionDuration"].eq(0).or(d["currentSlot"].sub(d["slot"]).gt(d["auctionDuration"])), {inplace: true});
@@ -245,6 +255,10 @@ export function getDefaultAggregateLiquidityScores() {
 }
 
 export function groupLiquidityScoreForAggregateList(df: DataFrame, slot: number) {
+	if (df.size === 0) {
+		return getDefaultAggregateLiquidityScores();
+	}
+
 	df.fillNa(0, {columns: ["score"], inplace: true});
 	const aggQuery = df.query(df["score"].gt(0));
 	if (!aggQuery.size) {
